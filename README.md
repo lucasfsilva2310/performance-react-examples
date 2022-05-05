@@ -1,46 +1,108 @@
-# Getting Started with Create React App
+# Performance study and examples for React!
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Cases when a components needs to be re-rendered
 
-## Available Scripts
+- When a parent component has changed, all of its children will be re-rendered
+- When a prop changes, a component will be re-rendered along with its children
+- when something inside a hook is changed, the component will be re-rendered
 
-In the project directory, you can run:
+## Rendering flow
 
-### `npm start`
+1. Create a new version of the componente that needs to be re-rendered
+2. Compare this new version with the old one
+3. If something is outdated, React will re-render the new version on screen
+   Obs: A new rendering flow will be started, but that doesn´t mean that the whole component will be replaced, only the components that had been changed will be updated.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## Tips:
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+-> Study React devtools extensions for browser to debug performance
 
-### `npm test`
+## Memo (shallow compare) -> Check ProductItem component
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- It´s a function that we put around a component
+- It will basically negate the first step of the rendering flow, it nothing has changed for this component, then react wont create a new updated version of the component
 
-### `npm run build`
+### Arguments
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. The component itself
+2. A function comparing previous props with the latest props, and we create a rule around it. If the function returns true, the component will be re-rendered, if not, nothing will happen.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Cases to use
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1.  Pure functional components
 
-### `npm run eject`
+    1. Given the same arguments to the function, it will always return the same value.
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+2.  Renders too often
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+    1. For example, a component that has an input, meaning that everytime that we add a new character to the input, the component will re-render
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+3.  Re-renders with same props
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+    1. If a component re-renders often, but with same props
 
-## Learn More
+4.  Medium to big size components
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+    1. small components doesn´t to be checked because it wouldn´t be bad for performance to re-render it.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+    ***
+
+## useMemo -> check SearchResult component
+
+- It is used when there´s a calculus, or a logic that could complex or could need a lot of memory, in this case we could use useMemo to save the previous value if none of the arguments that we had passed to useMemo had changed.
+
+### Arguments
+
+1.  The main logic that we want to prevent running
+2.  dependencies array, same as useEffect, the logic will only be runned when an element from the dependecies array changes its value.
+
+### Cases to use
+
+1.  Heavy calculus/logic to get that result
+2.  Reference Equality (when we need to pass on that result to a children component, preventing the child to re-render)
+
+## useCallback -> Check Home component
+
+- It is used when we want to memoize a **FUNCTION**, not a value, like useMemo.
+- We don´t need to use useCallback when we think that a function has too much code to be re-rendered, it´s basically because of reference equality, meaning for example if we create a function inside a context, and we want to use that function in a component that´s inside the context, it could be a good idea.
+
+### Arguments
+
+1.  Function that we want to run
+2.  depencies array that useCallback will only recreate this specific function if any of the elements values inside of that array changes.
+
+### Cases to use
+
+1. when we want to pass a function to other components ( prop drilling, contexts etc)
+
+---
+
+## Logic and Data Formating
+
+- We always need to try to prevent complex logics inside a child component, because if something happens to the father, this logic will have to be remade. Sure, we can use a useMemo for that if we wanted to, but it would be simple to just leave this responsability to the father.
+
+---
+
+## Dynamic/Lazy Import ( Code Splitting ) -> check variable AddProductToWishList
+
+- Normally, on React or next, when we run yarn build it will generate a folder with **ALL** the code that our app needs to run, so for example if we use x libraries, the generated bundle will generate a code importing all libraries.
+
+- **BUT** sometimes there´s a code that will only be runned when the user take a specific action, for example clicking a button, opening a modal. So the modal will only be shown when a user clicks that button.
+
+### What does that mean, and what we can do about it?
+
+- So, on React we have a function called Lazy and a component Called Suspense. If we just want a component to be rendered when the user takes an action that involves that component, we can wrap that import inside the Lazy function. By doing that, we are saying to react that we only want that component to be rendered when the conditions for it to be rendered are met ( for example, checking if a state is true or false). To use Lazy we basicaclly need to wrap the component Suspense around it, to tell the application that we are waiting for the component to be build before we show it.
+- On Next its the same thing, but we dont need to use suspense, because we already have a SSR application, not static. just import dynamic and do the same thing as we did with lazy.
+
+## Virtualization --> SearchResults component (List component)
+
+- Sometimes we have a lot a components and information inside of a page, and sometimes the user wouldn´t even look at the information that needs to be scrolled down, so for that we would want to render that specific component **ONLY** if the user goes to the location by scrolling for example.
+
+- For that we can use a library instead of creating it by hand, one useful lib is react-virtualized
+
+**OBS**: right now the react-virtualized does not support react v18, so for us to run without any problems require a previous version listed below:
+
+"@types/react": "17.0.2",
+"@types/react-dom": "17.0.2"
+
+just put those 2 versions on your package.json and run a yarn command
